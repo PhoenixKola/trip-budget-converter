@@ -1,12 +1,9 @@
 {
   "base": "EUR",
   "date": "2026-02-13",
-  "fetchedAt": "2026-02-15T11:16:38.130Z",
-  "source": {
-    "name": "ECB eurofxref-daily.xml",
-    "url": "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml"
-  },
+  "fetchedAt": "2026-02-15T11:30:43.179Z",
   "rates": {
+    "EUR": 1,
     "USD": 1.1862,
     "JPY": 181.83,
     "CZK": 24.263,
@@ -35,6 +32,17 @@
     "PHP": 68.63,
     "SGD": 1.4992,
     "THB": 36.861,
-    "ZAR": 19.019
+    "ZAR": 19.019,
+    "ALL": 96.41
+  },
+  "meta": {
+    "ecb": {
+      "url": "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml",
+      "date": "2026-02-13"
+    },
+    "boa": {
+      "url": "https://www.bankofalbania.org/Markets/Official_exchange_rate/",
+      "updatedAt": "13.02.2026 12:35:58"
+    }
   }
 }

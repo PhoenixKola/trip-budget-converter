@@ -24,6 +24,12 @@ jobs:
       - name: Run ingest
         run: npm --prefix ingest run run
 
+      - name: Mirror data to public
+        run: |
+          mkdir -p public
+          cp data/latest.json public/latest.json
+          cp data/history.json public/history.json
+
       - name: Commit changes
         run: |
           git config user.name "data-bot"
