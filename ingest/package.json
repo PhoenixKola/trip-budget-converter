@@ -1,0 +1,11 @@
+{
+  "name": "trip-ingest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run": "node run.mjs"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.3"
+  }
+}
