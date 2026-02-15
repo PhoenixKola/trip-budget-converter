@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Udheto Shkurt",
+    "slug": "udheto-shkurt",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "package": "com.phoenixkola.udhetoshkurt",
+      "versionCode": 1
+    },
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-2653462201538649~2220939118"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b3c15bc0-131e-4a60-8723-98fdd6a591e0"
+      }
+    }
+  }
+}
