@@ -1,6 +1,7 @@
 import React from "react";
-import { Modal, View, Text, TextInput, FlatList, Pressable, StyleSheet, SafeAreaView } from "react-native";
+import { Modal, View, Text, TextInput, FlatList, Pressable, StyleSheet } from "react-native";
 import { CURRENCY_NAMES } from "./currencies";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   visible: boolean;
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export function CurrencyPicker({ visible, onClose, currencies, value, onPick }: Props) {
+  const insets = useSafeAreaInsets();
   const [q, setQ] = React.useState("");
 
   React.useEffect(() => {
@@ -28,8 +30,8 @@ export function CurrencyPicker({ visible, onClose, currencies, value, onPick }: 
   }, [q, currencies]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={s.safe}>
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
+      <View style={[s.safe, { paddingTop: insets.top + 10, paddingBottom: insets.bottom }]}>
         <View style={s.header}>
           <Text style={s.title}>Select currency</Text>
           <Pressable hitSlop={10} onPress={onClose}>
@@ -62,7 +64,7 @@ export function CurrencyPicker({ visible, onClose, currencies, value, onPick }: 
                   onPick(item);
                   onClose();
                 }}
-                style={({ pressed }) => [s.row, pressed && { opacity: 0.6 }]}
+                style={({ pressed }) => [s.row, pressed ? s.rowPressed : null]}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={s.code}>{item}</Text>
@@ -74,7 +76,7 @@ export function CurrencyPicker({ visible, onClose, currencies, value, onPick }: 
           }}
           ItemSeparatorComponent={() => <View style={s.sep} />}
         />
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -113,6 +115,8 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center"
   },
+  rowPressed: { opacity: 0.6 },
+
   code: { fontSize: 20, fontWeight: "900" },
   name: { marginTop: 3, opacity: 0.65, fontSize: 15 },
   check: { fontSize: 18, fontWeight: "900" },
