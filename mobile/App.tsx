@@ -97,7 +97,6 @@ export default function App() {
     }
   }
 
-  // Layout: sticky bottom result panel height
   const stickyH = 168;
   const bottomPad = stickyH + 18;
 
@@ -149,7 +148,6 @@ export default function App() {
     <SafeAreaView style={[styles.safe, { backgroundColor: UI.bg }]} edges={["top", "left", "right"]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <View style={styles.screen}>
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.brandIcon}>
               <Ionicons name="airplane" size={18} color={UI.accent} />
@@ -201,7 +199,6 @@ export default function App() {
             </View>
           </View>
 
-          {/* Tabs */}
           <View style={styles.tabs}>
             <TabBtn
               active={tab === "convert"}
@@ -218,11 +215,9 @@ export default function App() {
             <TabBtn active={tab === "split"} onPress={() => setTab("split")} label={t(lang, "tabSplit")} icon="people" />
           </View>
 
-          {/* Content */}
           <View style={{ flex: 1 }}>
             {tab === "convert" ? (
               <View style={{ flex: 1 }}>
-                {/* Scrollable inputs */}
                 <ScrollView
                   showsVerticalScrollIndicator={false}
                   keyboardDismissMode="on-drag"
@@ -285,7 +280,6 @@ export default function App() {
                       ))}
                     </View>
 
-                    {/* Rate lines (scrollable content) */}
                     <View style={styles.rateBox}>
                       <View style={styles.rateHeader}>
                         <Ionicons name="stats-chart-outline" size={16} color={UI.accent} />
@@ -307,7 +301,6 @@ export default function App() {
                   </View>
                 </ScrollView>
 
-                {/* Sticky result panel */}
                 <View pointerEvents="box-none" style={[styles.stickyWrap, { paddingBottom: insets.bottom + 10 }]}>
                   <View style={styles.stickyCard}>
                     <View style={styles.stickyTop}>
@@ -347,12 +340,13 @@ export default function App() {
             ) : null}
 
             {tab === "checklist" ? <ChecklistScreen lang={lang} bottomPad={insets.bottom + 120} /> : null}
-            {tab === "split" ? <SplitScreen lang={lang} fx={fx} currencies={currencies} bottomPad={insets.bottom + 120} /> : null}
+            {tab === "split" ? (
+              <SplitScreen lang={lang} fx={fx} currencies={currencies} bottomPad={insets.bottom + 120} />
+            ) : null}
           </View>
         </View>
       </KeyboardAvoidingView>
 
-      {/* Ad banner pinned to bottom */}
       <View style={[styles.adBar, { paddingBottom: insets.bottom }]}>
         <BannerAd unitId={adUnitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
       </View>
@@ -391,7 +385,6 @@ function parseAmount(s: string) {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Micro press-scale wrapper */
 function AnimatedPressable({
   children,
   style,
@@ -437,39 +430,6 @@ function AnimatedPressable({
   );
 }
 
-// Pressable with proper typing separation
-function TextPressable({
-  children,
-  onPress,
-  disabled,
-  hitSlop,
-  onPressIn,
-  onPressOut
-}: any) {
-  return (
-    <View>
-      {/* Pressable is imported? No: keep it local to avoid extra imports */}
-      {/* eslint-disable-next-line react-native/no-inline-styles */}
-      <View style={{}}>
-        {/* fallback: use RN Pressable via require to keep file short */}
-      </View>
-    </View>
-  );
-}
-
-/**
- * Because we didn’t import Pressable at top in this file (we removed it),
- * we define it here safely via require.
- */
-const PressableAny = require("react-native").Pressable;
-
-function TextPressableImpl(props: any) {
-  return <PressableAny {...props} />;
-}
-// swap internal component ref
-(TextPressable as any) = TextPressableImpl;
-
-/** Smooth count-up for result (when numeric). Falls back to text when null/NaN. */
 function CountUpText({
   value,
   text,
@@ -504,9 +464,6 @@ function CountUpText({
       const eased = 1 - Math.pow(1 - t, 3);
       const v = from + (to - from) * eased;
 
-      // keep formatting exactly like your app (formatMoney) by using the provided final `text`
-      // but to animate nicely, we’ll approximate with 2 decimals if it looks like money.
-      // If you want perfect formatting during animation, tell me and we’ll parse currency from `text`.
       const approx = v;
       const s = approximateMoneyText(text, approx);
       setDisplay(s);
@@ -527,15 +484,11 @@ function CountUpText({
 }
 
 function approximateMoneyText(finalText: string, approx: number) {
-  // If finalText is "—" or non-numeric-ish, just return finalText
   if (!finalText || finalText === "—") return finalText;
 
-  // Keep currency symbol/prefix/suffix by extracting digits positions
-  // Simple approach: replace first number-like chunk with approx formatted.
   const approxStr = formatApproxNumber(approx);
 
-  const replaced = finalText.replace(/-?\d[\d\s.,]*/g, (m) => {
-    // replace only first occurrence
+  const replaced = finalText.replace(/-?\d[\d\s.,]*/g, () => {
     return approxStr;
   });
 
@@ -656,7 +609,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    width: "100%",
+    width: "100%"
   },
   card: {
     borderRadius: 22,
