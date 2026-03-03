@@ -246,6 +246,7 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
               value={noteDraft}
               onChangeText={setNoteDraft}
               placeholder={addPlaceholder}
+              placeholderTextColor={UI.muted}
               style={styles.noteInput}
               returnKeyType="done"
               blurOnSubmit={false}
