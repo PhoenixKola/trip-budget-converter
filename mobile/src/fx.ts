@@ -14,48 +14,58 @@ export type FxJson = {
   };
 };
 
-const cachePath = () =>
+export const cachePath = () =>
   `${FileSystem.documentDirectory ?? FileSystem.cacheDirectory ?? ""}${CACHE_FILE}`;
 
-export async function loadFx(): Promise<{ fx: FxJson; fromCache: boolean }> {
+export async function readCachedFx(): Promise<FxJson | null> {
   const path = cachePath();
 
-  // Try cache first
   try {
     const info = await FileSystem.getInfoAsync(path);
-    if (info.exists) {
-      const raw = await FileSystem.readAsStringAsync(path);
-      const fx = JSON.parse(raw) as FxJson;
+    if (!info.exists) return null;
 
-      // refresh in background
-      refreshFx(path).catch(() => {});
-      return { fx, fromCache: true };
-    }
+    const raw = await FileSystem.readAsStringAsync(path);
+    return JSON.parse(raw) as FxJson;
   } catch {
-    // ignore
+    return null;
+  }
+}
+
+export async function writeCachedFx(fx: FxJson): Promise<void> {
+  const path = cachePath();
+  await FileSystem.writeAsStringAsync(path, JSON.stringify(fx));
+}
+
+export async function loadFx(): Promise<{ fx: FxJson; fromCache: boolean }> {
+  const cached = await readCachedFx();
+
+  if (cached) {
+    return { fx: cached, fromCache: true };
   }
 
-  // no cache -> fetch now
   const fx = await fetchFx();
-  await FileSystem.writeAsStringAsync(path, JSON.stringify(fx));
+  await writeCachedFx(fx);
   return { fx, fromCache: false };
 }
 
 export async function refreshFxNow(): Promise<{ fx: FxJson }> {
   const fx = await fetchFx();
-  const path = cachePath();
-  await FileSystem.writeAsStringAsync(path, JSON.stringify(fx));
+  await writeCachedFx(fx);
   return { fx };
 }
 
-async function refreshFx(path: string) {
+export async function refreshFx(): Promise<FxJson> {
   const fx = await fetchFx();
-  await FileSystem.writeAsStringAsync(path, JSON.stringify(fx));
+  await writeCachedFx(fx);
+  return fx;
 }
 
 async function fetchFx(): Promise<FxJson> {
-  const res = await fetch(FX_URL, { cache: "no-store" });
+  const url = `${FX_URL}${FX_URL.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  const res = await fetch(url);
+
   if (!res.ok) throw new Error(`FX fetch failed: ${res.status}`);
+
   return (await res.json()) as FxJson;
 }
 

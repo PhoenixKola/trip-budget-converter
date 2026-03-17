@@ -15,7 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import mobileAds, { BannerAd, BannerAdSize, TestIds } from "react-native-google-mobile-ads";
 import { Ionicons } from "@expo/vector-icons";
 
-import { convert, listCurrencies, loadFx, refreshFxNow } from "./src/fx";
+import { convert, listCurrencies, readCachedFx, refreshFxNow } from "./src/fx";
 import { CurrencyPicker } from "./src/CurrencyPicker";
 import { CURRENCY_NAMES } from "./src/currencies";
 import { t, type Lang } from "./src/i18n";
@@ -65,10 +65,29 @@ export default function App() {
   const loadRates = React.useCallback(async () => {
     setLoading(true);
     setError("");
+
     try {
-      const r = await loadFx();
+      const cached = await readCachedFx();
+
+      if (cached) {
+        setFx(cached);
+        setFromCache(true);
+        setLoading(false);
+
+        try {
+          const r = await refreshFxNow();
+          setFx(r.fx);
+          setFromCache(false);
+        } catch (e) {
+          console.warn("Background refresh failed:", e);
+        }
+
+        return;
+      }
+
+      const r = await refreshFxNow();
       setFx(r.fx);
-      setFromCache(r.fromCache);
+      setFromCache(false);
     } catch (e: any) {
       setError(String(e?.message ?? e));
     } finally {
