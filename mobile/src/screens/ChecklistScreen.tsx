@@ -1,26 +1,19 @@
 import React from "react";
-import { View, Text, TextInput, StyleSheet, ScrollView, Alert } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import type { Lang } from "../i18n";
+import { t } from "../i18n";
 import { getJson, setJson } from "../storage";
+import { FONTS, RADIUS, useTheme } from "../theme";
+import { Card, PressableScale, SectionHeader } from "../ui";
+import { ProgressRing } from "../components/Sparkline";
 
 type Item = { id: string; label: string; done: boolean };
 
 const KEY = "trip_checklist_v1";
 const NOTES_KEY = "trip_notes_v2_lines";
 const NOTE_DRAFT_KEY = "trip_notes_v2_draft";
-
-const UI = {
-  bg: "#F6F7FB",
-  card: "#FFFFFF",
-  text: "#0F172A",
-  muted: "#64748B",
-  border: "rgba(15, 23, 42, 0.08)",
-  shadow: "rgba(2, 6, 23, 0.08)",
-  accent: "#2563EB",
-  accentSoft: "rgba(37, 99, 235, 0.12)",
-  dark: "#0B1220"
-};
 
 function defaults(lang: Lang): Item[] {
   if (lang === "sq") {
@@ -43,26 +36,50 @@ function defaults(lang: Lang): Item[] {
   ];
 }
 
-function itemIcon(id: string) {
+type Category = "documents" | "tech" | "health" | "other";
+
+const CATEGORY_OF: Record<string, Category> = {
+  passport: "documents",
+  insurance: "documents",
+  tickets: "documents",
+  charger: "tech",
+  adapter: "tech",
+  meds: "health"
+};
+
+const CATEGORY_ORDER: Category[] = ["documents", "tech", "health", "other"];
+
+function categoryLabel(cat: Category, lang: Lang): string {
+  const labels: Record<Category, { en: string; sq: string }> = {
+    documents: { en: "Documents", sq: "Dokumentet" },
+    tech: { en: "Tech", sq: "Teknologji" },
+    health: { en: "Health", sq: "Shëndeti" },
+    other: { en: "Other", sq: "Të tjera" }
+  };
+  return labels[cat][lang];
+}
+
+function itemIcon(id: string): { name: any; lib: "mci" | "ion" } {
   switch (id) {
     case "passport":
-      return { name: "passport", lib: "mci" as const };
+      return { name: "passport", lib: "mci" };
     case "charger":
-      return { name: "cellphone-charging", lib: "mci" as const };
+      return { name: "cellphone-charging", lib: "mci" };
     case "adapter":
-      return { name: "power-plug", lib: "mci" as const };
+      return { name: "power-plug", lib: "mci" };
     case "meds":
-      return { name: "medical-bag", lib: "mci" as const };
+      return { name: "medical-bag", lib: "mci" };
     case "insurance":
-      return { name: "shield-check", lib: "mci" as const };
+      return { name: "shield-check", lib: "mci" };
     case "tickets":
-      return { name: "ticket-confirmation", lib: "mci" as const };
+      return { name: "ticket-confirmation", lib: "mci" };
     default:
-      return { name: "checkmark-circle-outline", lib: "ion" as const };
+      return { name: "checkmark-circle-outline", lib: "ion" };
   }
 }
 
 export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; bottomPad?: number }) {
+  const { palette } = useTheme();
   const pad = bottomPad ?? 120;
 
   const [items, setItems] = React.useState<Item[]>([]);
@@ -71,7 +88,6 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
   const [hydrated, setHydrated] = React.useState(false);
 
   const noteRef = React.useRef<TextInput>(null);
-  const PressableAny = require("react-native").Pressable;
 
   React.useEffect(() => {
     let alive = true;
@@ -98,8 +114,7 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
   }, [lang]);
 
   React.useEffect(() => {
-    if (!hydrated) return;
-    if (!items.length) return;
+    if (!hydrated || !items.length) return;
     setJson(KEY, items).catch(() => {});
   }, [items, hydrated]);
 
@@ -114,6 +129,7 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
   }, [noteDraft, hydrated]);
 
   function toggle(id: string) {
+    Haptics.selectionAsync().catch(() => {});
     setItems((prev) => prev.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
   }
 
@@ -127,12 +143,11 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
     setJson(NOTE_DRAFT_KEY, "").catch(() => {});
   }
 
-  async function addNoteLine() {
+  function addNoteLine() {
     const v = noteDraft.trim();
     if (!v) return;
-
+    Haptics.selectionAsync().catch(() => {});
     setNoteDraft("");
-
     setNoteLines((prev) => {
       const next = [v, ...prev];
       setJson(NOTES_KEY, next).catch(() => {});
@@ -160,307 +175,260 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
     ]);
   }
 
-  const title = lang === "sq" ? "Lista e udhëtimit" : "Travel checklist";
-  const notesLabel = lang === "sq" ? "Shënime" : "Notes";
-  const resetLabel = lang === "sq" ? "Rivendos" : "Reset";
+  const doneCount = items.filter((x) => x.done).length;
+  const total = items.length || 1;
+  const pct = doneCount / total;
+
+  const grouped = React.useMemo(() => {
+    const map = new Map<Category, Item[]>();
+    for (const it of items) {
+      const cat = CATEGORY_OF[it.id] ?? "other";
+      map.set(cat, [...(map.get(cat) ?? []), it]);
+    }
+    return CATEGORY_ORDER.filter((c) => map.get(c)?.length).map((c) => ({ cat: c, items: map.get(c)! }));
+  }, [items]);
+
   const addPlaceholder = lang === "sq" ? "Shto shënim dhe shtyp Enter…" : "Type a note and press Enter…";
   const hint = lang === "sq" ? "Shtyp mbi një shënim për ta fshirë." : "Tap a note to delete it.";
   const emptyTitle = lang === "sq" ? "S’ke shënime ende" : "No notes yet";
   const emptySub = lang === "sq" ? "Shto një shënim të shpejtë për udhëtimin." : "Add a quick note for your trip.";
-  const emptyCta = lang === "sq" ? "Shto shënimin e parë" : "Add first note";
-
-  const doneCount = items.filter((x) => x.done).length;
-  const total = items.length || 1;
-  const pct = Math.round((doneCount / total) * 100);
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.topRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{title}</Text>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      keyboardDismissMode="on-drag"
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingBottom: pad, paddingTop: 6 }}
+      style={{ flex: 1 }}
+    >
+      {/* ── Progress header ──────────────────────────────────── */}
+      <Card style={styles.progressCard}>
+        <ProgressRing size={62} strokeWidth={6} progress={pct} color={palette.accent} track={palette.inputBg}>
+          <Text style={{ fontFamily: FONTS.display, fontSize: 15, color: palette.text }}>
+            {Math.round(pct * 100)}
+            <Text style={{ fontSize: 10 }}>%</Text>
+          </Text>
+        </ProgressRing>
 
-          <View style={styles.progressPill}>
-            <Ionicons name="checkmark-done" size={14} color={UI.accent} />
-            <Text style={styles.progressTxt}>
-              {doneCount}/{items.length} • {pct}%
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontFamily: FONTS.display, fontSize: 17, color: palette.text }}>
+            {lang === "sq" ? "Lista e udhëtimit" : "Travel checklist"}
+          </Text>
+          <Text style={{ fontFamily: FONTS.bodyMed, fontSize: 13, color: palette.muted, marginTop: 3 }}>
+            {doneCount}/{items.length} {t(lang, "packed")}
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={reset}
+          hitSlop={8}
+          style={[styles.resetBtn, { backgroundColor: palette.inputBg }]}
+        >
+          <Ionicons name="refresh" size={15} color={palette.muted} />
+          <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: palette.muted }}>{t(lang, "reset")}</Text>
+        </Pressable>
+      </Card>
+
+      {/* ── Essentials by category ───────────────────────────── */}
+      <Card style={{ marginTop: 14 }}>
+        <SectionHeader icon="bag-check-outline" title={t(lang, "essentials")} />
+
+        {grouped.map(({ cat, items: catItems }) => (
+          <View key={cat}>
+            <Text
+              style={{
+                fontFamily: FONTS.bodySemi,
+                fontSize: 11,
+                color: palette.faint,
+                textTransform: "uppercase",
+                letterSpacing: 0.7,
+                marginTop: 12,
+                marginBottom: 2
+              }}
+            >
+              {categoryLabel(cat, lang)}
+            </Text>
+
+            {catItems.map((it) => {
+              const ic = itemIcon(it.id);
+              const IconComp: any = ic.lib === "mci" ? MaterialCommunityIcons : Ionicons;
+
+              return (
+                <PressableScale key={it.id} onPress={() => toggle(it.id)} scaleIn={0.985}>
+                  <View style={[styles.itemRow, { borderTopColor: palette.border }]}>
+                    <View
+                      style={[
+                        styles.itemIconWrap,
+                        { backgroundColor: it.done ? palette.accent : palette.inputBg }
+                      ]}
+                    >
+                      <IconComp name={ic.name} size={17} color={it.done ? palette.onAccent : palette.muted} />
+                    </View>
+
+                    <Text
+                      style={[
+                        { flex: 1, fontSize: 14.5, fontFamily: FONTS.bodySemi, color: palette.text },
+                        it.done ? { opacity: 0.45, textDecorationLine: "line-through" } : null
+                      ]}
+                    >
+                      {it.label}
+                    </Text>
+
+                    <Ionicons
+                      name={it.done ? "checkmark-circle" : "ellipse-outline"}
+                      size={22}
+                      color={it.done ? palette.success : palette.faint}
+                    />
+                  </View>
+                </PressableScale>
+              );
+            })}
+          </View>
+        ))}
+      </Card>
+
+      {/* ── Notes ────────────────────────────────────────────── */}
+      <Card style={{ marginTop: 14 }}>
+        <SectionHeader icon="document-text-outline" title={t(lang, "notes")} />
+
+        <View style={[styles.inputWrap, { backgroundColor: palette.inputBg, borderColor: palette.border }]}>
+          <Ionicons name="create-outline" size={16} color={palette.muted} />
+          <TextInput
+            ref={noteRef}
+            value={noteDraft}
+            onChangeText={setNoteDraft}
+            placeholder={addPlaceholder}
+            placeholderTextColor={palette.faint}
+            style={[styles.noteInput, { color: palette.text }]}
+            returnKeyType="done"
+            blurOnSubmit={false}
+            onSubmitEditing={addNoteLine}
+          />
+          <Pressable onPress={addNoteLine} hitSlop={8} style={[styles.addBtn, { backgroundColor: palette.accent }]}>
+            <Ionicons name="add" size={18} color={palette.onAccent} />
+          </Pressable>
+        </View>
+
+        {!noteLines.length ? (
+          <View style={styles.emptyBox}>
+            <View style={[styles.emptyIcon, { backgroundColor: palette.accentSoft }]}>
+              <Ionicons name="sparkles-outline" size={18} color={palette.accent} />
+            </View>
+            <Text style={{ marginTop: 10, fontFamily: FONTS.displaySemi, fontSize: 14, color: palette.text }}>
+              {emptyTitle}
+            </Text>
+            <Text
+              style={{
+                marginTop: 4,
+                fontFamily: FONTS.bodyMed,
+                fontSize: 12,
+                color: palette.muted,
+                textAlign: "center"
+              }}
+            >
+              {emptySub}
             </Text>
           </View>
-        </View>
-
-        <PressableAny onPress={reset} style={styles.resetBtn} hitSlop={10}>
-          <Ionicons name="refresh" size={16} color={UI.dark} />
-          <Text style={styles.resetTxt}>{resetLabel}</Text>
-        </PressableAny>
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardDismissMode="on-drag"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: pad }}
-      >
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <Ionicons name="checkbox-outline" size={18} color={UI.accent} />
+        ) : (
+          <>
+            <View style={styles.hintRow}>
+              <Ionicons name="information-circle-outline" size={13} color={palette.faint} />
+              <Text style={{ fontSize: 11.5, fontFamily: FONTS.bodyMed, color: palette.faint }}>{hint}</Text>
             </View>
-            <Text style={styles.cardTitle}>{lang === "sq" ? "Gjërat kryesore" : "Essentials"}</Text>
-          </View>
 
-          {items.map((it) => {
-            const ic = itemIcon(it.id);
-            const IconComp: any = ic.lib === "mci" ? MaterialCommunityIcons : Ionicons;
-
-            return (
-              <PressableAny key={it.id} onPress={() => toggle(it.id)} style={styles.itemRow}>
-                <View style={[styles.itemIconWrap, it.done ? styles.itemIconWrapOn : null]}>
-                  <IconComp name={ic.name} size={18} color={it.done ? UI.card : UI.muted} />
+            {noteLines.map((n, idx) => (
+              <Pressable key={`${idx}-${n}`} onPress={() => removeNoteLine(idx)}>
+                <View style={[styles.noteRow, { borderTopColor: palette.border }]}>
+                  <View style={[styles.noteDot, { backgroundColor: palette.accentSoft }]}>
+                    <Ionicons name="bookmark-outline" size={13} color={palette.accent} />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 14, fontFamily: FONTS.bodyMed, color: palette.text }}>{n}</Text>
+                  <Ionicons name="trash-outline" size={16} color={palette.faint} />
                 </View>
-
-                <Text style={[styles.itemTxt, it.done ? styles.itemDone : null]}>{it.label}</Text>
-
-                <View style={styles.rightCheck}>
-                  <Ionicons
-                    name={it.done ? "checkmark-circle" : "ellipse-outline"}
-                    size={22}
-                    color={it.done ? UI.accent : "rgba(15,23,42,0.25)"}
-                  />
-                </View>
-              </PressableAny>
-            );
-          })}
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardIcon}>
-              <Ionicons name="document-text-outline" size={18} color={UI.accent} />
-            </View>
-            <Text style={styles.cardTitle}>{notesLabel}</Text>
-          </View>
-
-          <View style={styles.inputWrap}>
-            <Ionicons name="create-outline" size={16} color={UI.muted} />
-            <TextInput
-              ref={noteRef}
-              value={noteDraft}
-              onChangeText={setNoteDraft}
-              placeholder={addPlaceholder}
-              placeholderTextColor={UI.muted}
-              style={styles.noteInput}
-              returnKeyType="done"
-              blurOnSubmit={false}
-              onSubmitEditing={addNoteLine}
-            />
-            <PressableAny onPress={addNoteLine} style={styles.addBtn} hitSlop={10}>
-              <Ionicons name="add" size={18} color={UI.card} />
-            </PressableAny>
-          </View>
-
-          {!noteLines.length ? (
-            <View style={styles.emptyBox}>
-              <View style={styles.emptyIcon}>
-                <Ionicons name="sparkles-outline" size={18} color={UI.accent} />
-              </View>
-              <Text style={styles.emptyTitle}>{emptyTitle}</Text>
-              <Text style={styles.emptySub}>{emptySub}</Text>
-
-              <PressableAny onPress={() => noteRef.current?.focus()} style={styles.emptyBtn} hitSlop={10}>
-                <Ionicons name="add-circle-outline" size={18} color={UI.card} />
-                <Text style={styles.emptyBtnTxt}>{emptyCta}</Text>
-              </PressableAny>
-            </View>
-          ) : (
-            <>
-              <View style={styles.hintRow}>
-                <Ionicons name="information-circle-outline" size={14} color={UI.muted} />
-                <Text style={styles.hint}>{hint}</Text>
-              </View>
-
-              <View style={{ marginTop: 6 }}>
-                {noteLines.map((n, idx) => (
-                  <PressableAny key={`${idx}-${n}`} onPress={() => removeNoteLine(idx)} style={styles.noteRow}>
-                    <View style={styles.noteDot}>
-                      <Ionicons name="bookmark-outline" size={14} color={UI.accent} />
-                    </View>
-                    <Text style={styles.noteTxt}>{n}</Text>
-                    <Ionicons name="trash-outline" size={16} color="rgba(15,23,42,0.35)" />
-                  </PressableAny>
-                ))}
-              </View>
-            </>
-          )}
-        </View>
-      </ScrollView>
-    </View>
+              </Pressable>
+            ))}
+          </>
+        )}
+      </Card>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, marginTop: 10 },
-
-  topRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10, gap: 12 },
-
-  title: { fontSize: 18, fontWeight: "900", color: UI.text, marginBottom: 6 },
-
-  progressPill: {
-    alignSelf: "flex-start",
+  progressCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    backgroundColor: UI.accentSoft,
-    borderWidth: 1,
-    borderColor: "rgba(37,99,235,0.18)"
+    gap: 14
   },
-  progressTxt: { fontWeight: "900", color: UI.accent, fontSize: 12 },
 
   resetBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
+    gap: 6,
+    paddingVertical: 9,
     paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderWidth: 1,
-    borderColor: UI.border
+    borderRadius: RADIUS.pill
   },
-  resetTxt: { fontWeight: "900", fontSize: 12, color: UI.dark },
-
-  card: {
-    marginTop: 12,
-    borderRadius: 22,
-    padding: 16,
-    backgroundColor: UI.card,
-    borderWidth: 1,
-    borderColor: UI.border,
-    shadowColor: UI.shadow,
-    shadowOpacity: 1,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 3
-  },
-
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
-  cardIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 14,
-    backgroundColor: UI.accentSoft,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(37,99,235,0.18)"
-  },
-  cardTitle: { fontSize: 15, fontWeight: "900", color: UI.text },
 
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(15,23,42,0.06)"
+    gap: 12,
+    paddingVertical: 11,
+    borderTopWidth: 1
   },
 
   itemIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: UI.border,
-    backgroundColor: "rgba(15,23,42,0.02)",
+    width: 36,
+    height: 36,
+    borderRadius: 14,
     alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12
+    justifyContent: "center"
   },
-  itemIconWrapOn: {
-    backgroundColor: UI.accent,
-    borderColor: "rgba(37,99,235,0.25)"
-  },
-
-  itemTxt: { flex: 1, fontSize: 15, fontWeight: "900", color: UI.text },
-  itemDone: { opacity: 0.55, textDecorationLine: "line-through" },
-
-  rightCheck: { marginLeft: 10 },
 
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     borderWidth: 1,
-    borderColor: UI.border,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "rgba(15,23,42,0.02)"
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 13,
+    paddingVertical: 8
   },
-  noteInput: { flex: 1, fontSize: 14, fontWeight: "800", color: UI.text },
+  noteInput: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", padding: 0 },
 
   addBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 14,
-    backgroundColor: UI.dark,
+    width: 32,
+    height: 32,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center"
   },
 
-  emptyBox: {
-    marginTop: 14,
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: UI.border,
-    backgroundColor: "rgba(15,23,42,0.02)",
-    alignItems: "center"
-  },
+  emptyBox: { marginTop: 16, alignItems: "center", paddingBottom: 6 },
   emptyIcon: {
     width: 44,
     height: 44,
     borderRadius: 18,
-    backgroundColor: UI.accentSoft,
-    borderWidth: 1,
-    borderColor: "rgba(37,99,235,0.18)",
     alignItems: "center",
     justifyContent: "center"
   },
-  emptyTitle: { marginTop: 10, fontWeight: "900", color: UI.text },
-  emptySub: { marginTop: 6, color: UI.muted, fontWeight: "700", textAlign: "center" },
-  emptyBtn: {
-    marginTop: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    backgroundColor: UI.dark
-  },
-  emptyBtnTxt: { color: UI.card, fontWeight: "900" },
 
-  hintRow: { marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 },
-  hint: { opacity: 0.85, fontSize: 12, fontWeight: "800", color: UI.muted },
+  hintRow: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 },
 
   noteRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderTopWidth: 1,
-    borderTopColor: "rgba(15,23,42,0.06)"
+    marginTop: 4
   },
   noteDot: {
     width: 30,
     height: 30,
-    borderRadius: 14,
-    backgroundColor: UI.accentSoft,
-    borderWidth: 1,
-    borderColor: "rgba(37,99,235,0.18)",
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center"
-  },
-  noteTxt: { flex: 1, fontSize: 14, fontWeight: "900", color: UI.text }
+  }
 });

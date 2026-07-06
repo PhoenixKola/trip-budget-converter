@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($h = Get-Content \"e:\\\\Programming\\\\Projects\\\\Udheto Shkurt\\\\trip-budget-converter\\\\data\\\\history.json\" -Raw | ConvertFrom-Json; $h.items.Count; $h.items[0].date; $h.items[-1].date; \\($h.items[-1].rates | Get-Member -MemberType NoteProperty\\).Name -join \",\")"
+    ]
+  }
+}
