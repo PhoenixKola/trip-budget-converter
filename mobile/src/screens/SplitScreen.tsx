@@ -179,7 +179,7 @@ export default function SplitScreen(props: { lang: Lang; fx: FxJson; currencies:
           </View>
 
           {/* Currencies */}
-          <View style={styles.twoCol}>
+          <View style={[styles.twoCol, { marginTop: 16 }]}>
             <Selector
               label={t(lang, "paidIn")}
               code={paidIn}

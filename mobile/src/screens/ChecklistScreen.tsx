@@ -15,25 +15,23 @@ const KEY = "trip_checklist_v1";
 const NOTES_KEY = "trip_notes_v2_lines";
 const NOTE_DRAFT_KEY = "trip_notes_v2_draft";
 
+const ITEM_LABELS: Record<string, { en: string; sq: string }> = {
+  passport: { en: "Passport / ID", sq: "Pasaportë / ID" },
+  charger: { en: "Charger", sq: "Karikues" },
+  adapter: { en: "Power adapter", sq: "Adaptor prizash" },
+  meds: { en: "Meds", sq: "Ilaçe / vitaminat" },
+  insurance: { en: "Travel insurance", sq: "Sigurim udhëtimi" },
+  tickets: { en: "Tickets / bookings", sq: "Bileta / rezervime" }
+};
+
+// Labels are resolved by id at render time; the stored label is only a
+// fallback for items without an entry here.
+function itemLabel(it: Item, lang: Lang): string {
+  return ITEM_LABELS[it.id]?.[lang] ?? it.label;
+}
+
 function defaults(lang: Lang): Item[] {
-  if (lang === "sq") {
-    return [
-      { id: "passport", label: "Pasaportë / ID", done: false },
-      { id: "charger", label: "Karikues", done: false },
-      { id: "adapter", label: "Adaptor prizash", done: false },
-      { id: "meds", label: "Ilaçe / vitaminat", done: false },
-      { id: "insurance", label: "Sigurim udhëtimi", done: false },
-      { id: "tickets", label: "Bileta / rezervime", done: false }
-    ];
-  }
-  return [
-    { id: "passport", label: "Passport / ID", done: false },
-    { id: "charger", label: "Charger", done: false },
-    { id: "adapter", label: "Power adapter", done: false },
-    { id: "meds", label: "Meds", done: false },
-    { id: "insurance", label: "Travel insurance", done: false },
-    { id: "tickets", label: "Tickets / bookings", done: false }
-  ];
+  return Object.keys(ITEM_LABELS).map((id) => ({ id, label: ITEM_LABELS[id][lang], done: false }));
 }
 
 type Category = "documents" | "tech" | "health" | "other";
@@ -271,7 +269,7 @@ export default function ChecklistScreen({ lang, bottomPad }: { lang: Lang; botto
                         it.done ? { opacity: 0.45, textDecorationLine: "line-through" } : null
                       ]}
                     >
-                      {it.label}
+                      {itemLabel(it, lang)}
                     </Text>
 
                     <Ionicons

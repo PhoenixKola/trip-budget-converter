@@ -95,7 +95,7 @@ export const SPACE = { xs: 4, sm: 8, md: 12, lg: 16, xl: 22, xxl: 30 } as const;
 /** Rich two-stop gradients keyed by currency, used for the hero card. */
 const CURRENCY_GRADIENTS: Record<string, [string, string]> = {
   EUR: ["#312E81", "#6366F1"],
-  ALL: ["#7F1D1D", "#EF4444"],
+  ALL: ["#115E59", "#2DD4BF"],
   USD: ["#064E3B", "#10B981"],
   GBP: ["#4C1D95", "#8B5CF6"],
   CHF: ["#881337", "#F43F5E"],
