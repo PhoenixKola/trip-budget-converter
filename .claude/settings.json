@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell($h = Get-Content \"e:\\\\Programming\\\\Projects\\\\Udheto Shkurt\\\\trip-budget-converter\\\\data\\\\history.json\" -Raw | ConvertFrom-Json; $h.items.Count; $h.items[0].date; $h.items[-1].date; \\($h.items[-1].rates | Get-Member -MemberType NoteProperty\\).Name -join \",\")"
+      "PowerShell($h = Get-Content \"e:\\\\Programming\\\\Projects\\\\Udheto Shkurt\\\\trip-budget-converter\\\\data\\\\history.json\" -Raw | ConvertFrom-Json; $h.items.Count; $h.items[0].date; $h.items[-1].date; \\($h.items[-1].rates | Get-Member -MemberType NoteProperty\\).Name -join \",\")",
+      "Bash(git checkout *)",
+      "Bash(npm --prefix ingest run run)",
+      "Bash(python -c \"import json; h=json.load\\(open\\('data/history.json'\\)\\); print\\('history entries:', len\\(h['items']\\), '| first:', h['items'][0]['date'], '| last:', h['items'][-1]['date']\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
